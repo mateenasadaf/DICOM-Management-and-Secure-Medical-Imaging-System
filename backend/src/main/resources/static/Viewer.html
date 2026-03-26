@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title> <!-- 🔥 REMOVED TITLE TEXT -->
+
+    <script src="https://unpkg.com/cornerstone-core@2/dist/cornerstone.min.js"></script>
+    <script src="https://unpkg.com/dicom-parser@1/dist/dicomParser.min.js"></script>
+    <script src="https://unpkg.com/cornerstone-wado-image-loader@3/dist/cornerstoneWADOImageLoader.min.js"></script>
+
+    <style>
+        /* 🔥 REMOVE ALL DEFAULT SPACING */
+        body {
+            margin: 0;
+            padding: 0;
+            background: black; /* medical viewer style */
+            overflow: hidden;
+        }
+
+        /* 🔥 MAKE IMAGE FULL AREA */
+        #dicomImage {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- 🔥 ONLY IMAGE, NO EXTRA TEXT -->
+<div id="dicomImage"></div>
+
+<script>
+    const element = document.getElementById('dicomImage');
+
+    // 🔥 REQUIRED SETUP
+    cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
+    cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
+
+    cornerstoneWADOImageLoader.configure({
+        useWebWorkers: false
+    });
+
+    cornerstone.enable(element);
+
+    // 🔥 GET FILE FROM URL
+    const params = new URLSearchParams(window.location.search);
+    const file = params.get("file");
+
+    // 🔥 LOAD FROM BACKEND
+    const imageId = "wadouri:http://localhost:8080/patients/view?file=" + file;
+
+    cornerstone.loadImage(imageId).then(function(image) {
+        cornerstone.displayImage(element, image);
+    }).catch(function(err){
+        console.error("❌ ERROR:", err);
+        alert("Error loading DICOM image");
+    });
+</script>
+
+</body>
+</html>
