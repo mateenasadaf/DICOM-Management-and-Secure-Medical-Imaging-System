@@ -1,24 +1,21 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { Upload, FileImage, CheckCircle2, AlertCircle, Loader2, Wrench, User, Calendar, Hash, Activity, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { DicomPatient, DicomStudyForm, UploadStatus } from "@/lib/dicom-types"
 
 interface TechnicianDashboardProps {
-  patients: DicomPatient[]
   onViewPatient: (patient: DicomPatient) => void
   onUploadComplete: () => void
-  isLoading: boolean
 }
 
 const MODALITIES = ["CT", "MR", "CR", "US", "MG", "PT", "XA", "DX", "NM", "RF"]
 const GENDERS = ["M", "F", "O"]
 
-// ✅ FIX 1: Robust DICOM file validation — handles .dcm, .dicom, .ima, .img, no-extension files
 const isDicomFile = (file: File): boolean => {
-  const name = file.name.toLowerCase() // ✅ toLowerCase covers .DCM, .Dcm, .dcm etc.
+  const name = file.name.toLowerCase()
   return (
     name.endsWith('.dcm') ||
     name.endsWith('.dicom') ||
@@ -26,11 +23,11 @@ const isDicomFile = (file: File): boolean => {
     name.endsWith('.img') ||
     file.type === 'application/dicom' ||
     file.type === 'application/octet-stream' ||
-    !name.includes('.') // no extension — common with DICOM from scanners
+    !name.includes('.')
   )
 }
 
-export function TechnicianDashboard({ patients, onViewPatient, onUploadComplete, isLoading }: TechnicianDashboardProps) {
+export function TechnicianDashboard({ onViewPatient, onUploadComplete }: TechnicianDashboardProps) {
   const [formData, setFormData] = useState<DicomStudyForm>({
     patientName: "",
     patientId: "",
@@ -45,9 +42,30 @@ export function TechnicianDashboard({ patients, onViewPatient, onUploadComplete,
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [status, setStatus] = useState<UploadStatus>({ type: 'idle', message: '' })
   const [isDragging, setIsDragging] = useState(false)
-
-  // ✅ FIX 2: Ref to reset file input so re-selecting the same file triggers onChange
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 🔥 Real data from backend — replaces dummy/prop patients
+  const [patients, setPatients] = useState<DicomPatient[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  const fetchPatients = () => {
+    setIsLoading(true)
+    fetch("http://localhost:8080/patients")
+      .then(res => res.json())
+      .then(data => {
+        setPatients(data)
+        setIsLoading(false)
+      })
+      .catch(err => {
+        console.error(err)
+        setIsLoading(false)
+      })
+  }
+
+  // 🔥 Fetch on mount
+  useEffect(() => {
+    fetchPatients()
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -64,7 +82,6 @@ export function TechnicianDashboard({ patients, onViewPatient, onUploadComplete,
     setIsDragging(false)
   }, [])
 
-  // ✅ FIX 3: handleDrop now uses isDicomFile() helper instead of only checking .dcm extension
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
@@ -77,10 +94,8 @@ export function TechnicianDashboard({ patients, onViewPatient, onUploadComplete,
     }
   }, [])
 
-  // ✅ FIX 4: handleFileSelect now uses isDicomFile() helper + resets input value via ref
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    // Reset input so the same file can be re-selected
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -136,6 +151,9 @@ export function TechnicianDashboard({ patients, onViewPatient, onUploadComplete,
         studyDescription: "",
         accessionNumber: "",
       })
+
+      // 🔥 Refresh the table immediately after upload
+      fetchPatients()
       onUploadComplete()
 
       setTimeout(() => {
@@ -188,7 +206,7 @@ export function TechnicianDashboard({ patients, onViewPatient, onUploadComplete,
                   <label className="text-sm font-medium text-foreground">Patient ID</label>
                   <Input
                     name="patientId"
-                    placeholder="PT001"
+                    placeholder="001"
                     value={formData.patientId}
                     onChange={handleInputChange}
                     className="border-border/50 bg-secondary/50"
@@ -286,7 +304,7 @@ export function TechnicianDashboard({ patients, onViewPatient, onUploadComplete,
                 </div>
               </div>
 
-              {/* ✅ FIX 5: File Upload Zone — correct accept attribute + ref for reset */}
+              {/* File Upload Zone */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">DICOM File</label>
                 <div
@@ -301,7 +319,6 @@ export function TechnicianDashboard({ patients, onViewPatient, onUploadComplete,
                       : 'border-border/50 bg-secondary/30 hover:border-primary/50'
                   }`}
                 >
-                  {/* ✅ FIX: accept=".dcm,.dicom,.ima,.img" and ref attached */}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -333,7 +350,6 @@ export function TechnicianDashboard({ patients, onViewPatient, onUploadComplete,
                   )}
                 </div>
 
-                {/* ✅ FIX 6: Clear file button */}
                 {selectedFile && (
                   <button
                     type="button"

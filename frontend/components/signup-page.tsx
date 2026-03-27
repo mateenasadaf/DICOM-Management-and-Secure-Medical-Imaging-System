@@ -52,9 +52,12 @@ export function SignupPage({ onSwitchToLogin }: SignupPageProps) {
 
     setIsLoading(true)
     const result = await signup(name, email, password, role)
-    
+
     if (!result.success) {
       setError(result.error || "Signup failed")
+    } else {
+      // 🔥 ADDED: go to login page after signup
+      onSwitchToLogin()
     }
     setIsLoading(false)
   }

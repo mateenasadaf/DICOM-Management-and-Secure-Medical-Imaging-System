@@ -17,12 +17,12 @@ public class BackendApplication {
 		SpringApplication.run(BackendApplication.class, args);
 	}
 
-	@PostConstruct
+	/*@PostConstruct
 	public void run() {
 		try {
 			dicomService.processFiles();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
+	}*/
 }

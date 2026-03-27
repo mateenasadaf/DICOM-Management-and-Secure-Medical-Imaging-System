@@ -101,7 +101,7 @@ export function DicomViewer({ patient, onClose }: DicomViewerProps) {
         cornerstone.enable(element)
 
         // Load the DICOM image using the imageId format
-        const imageId = `wadouri:/dicom/file/${patient.filename}`
+        const imageId = `wadouri:http://localhost:8080/patients/view?file=${patient.filePath}`
         
         // Use cornerstone's loadImage function
         const image = await cornerstone.loadImage(imageId)

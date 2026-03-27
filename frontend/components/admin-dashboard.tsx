@@ -1,19 +1,36 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Search, Eye, User, Calendar, Activity, Hash, Shield, Users, FileImage, Database } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState, useMemo, useEffect } from "react"
+import { Search, User, Calendar, Activity, Hash, Shield, Users, FileImage, Database } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import type { DicomPatient } from "@/lib/dicom-types"
 
 interface AdminDashboardProps {
-  patients: DicomPatient[]
-  onViewPatient: (patient: DicomPatient) => void
-  isLoading: boolean
+  patients?: DicomPatient[]
+  onViewPatient?: (patient: DicomPatient) => void
+  isLoading?: boolean
 }
 
-export function AdminDashboard({ patients, onViewPatient, isLoading }: AdminDashboardProps) {
+export function AdminDashboard({ onViewPatient }: AdminDashboardProps) {
   const [searchQuery, setSearchQuery] = useState("")
+  const [patients, setPatients] = useState<DicomPatient[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // 🔥 Database connection - fetches live data from Spring Boot backend
+  useEffect(() => {
+    fetch("http://localhost:8080/patients")
+      .then(res => res.json())
+      .then(data => {
+        const formattedData = data.map((p: any) => ({
+            ...p,
+            age: p.patient_age,
+            gender: p.patient_gender
+          }))
+
+          setPatients(formattedData)
+        setIsLoading(false)
+      })
+  }, [])
 
   const filteredPatients = useMemo(() => {
     if (!searchQuery.trim()) return patients
@@ -122,7 +139,7 @@ export function AdminDashboard({ patients, onViewPatient, isLoading }: AdminDash
       {/* All Patient Data Table */}
       <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card/80 backdrop-blur-xl">
         <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-accent/5 blur-3xl" />
-        
+
         <div className="relative p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -175,15 +192,13 @@ export function AdminDashboard({ patients, onViewPatient, isLoading }: AdminDash
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Referring Doctor
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Actions
-                  </th>
+                  {/* ✅ Actions column REMOVED for admin security */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/20">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
+                    <td colSpan={7} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                         <span className="text-sm text-muted-foreground">Loading patient data...</span>
@@ -192,7 +207,7 @@ export function AdminDashboard({ patients, onViewPatient, isLoading }: AdminDash
                   </tr>
                 ) : filteredPatients.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
+                    <td colSpan={7} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <div className="rounded-full bg-muted/50 p-3">
                           <User className="h-6 w-6 text-muted-foreground" />
@@ -207,7 +222,7 @@ export function AdminDashboard({ patients, onViewPatient, isLoading }: AdminDash
                   filteredPatients.map((patient, index) => (
                     <tr
                       key={patient.id}
-                      className={`group transition-colors hover:bg-primary/5 ${
+                      className={`transition-colors hover:bg-primary/5 ${
                         index % 2 === 0 ? 'bg-transparent' : 'bg-secondary/20'
                       }`}
                     >
@@ -222,8 +237,8 @@ export function AdminDashboard({ patients, onViewPatient, isLoading }: AdminDash
                       <td className="px-4 py-3 text-muted-foreground">{patient.age}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          patient.gender === 'M' 
-                            ? 'bg-blue-500/10 text-blue-400' 
+                          patient.gender === 'M'
+                            ? 'bg-blue-500/10 text-blue-400'
                             : patient.gender === 'F'
                             ? 'bg-pink-500/10 text-pink-400'
                             : 'bg-gray-500/10 text-gray-400'
@@ -238,17 +253,7 @@ export function AdminDashboard({ patients, onViewPatient, isLoading }: AdminDash
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{patient.studyDate}</td>
                       <td className="px-4 py-3 text-muted-foreground">{patient.referringDoctor || '-'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onViewPatient(patient)}
-                          className="gap-2 text-primary opacity-0 transition-all hover:bg-primary/10 group-hover:opacity-100"
-                        >
-                          <Eye className="h-4 w-4" />
-                          View
-                        </Button>
-                      </td>
+                      {/* ✅ No Actions cell rendered */}
                     </tr>
                   ))
                 )}

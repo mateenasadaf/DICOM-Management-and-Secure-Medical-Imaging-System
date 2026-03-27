@@ -1,16 +1,17 @@
 package com.dicom.backend.controller;
-
 import com.dicom.backend.model.User;
 import com.dicom.backend.repository.UserRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
-
+import java.util.Optional;
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin
+
 public class AuthController {
 
     @Autowired
@@ -18,26 +19,44 @@ public class AuthController {
 
     // ✅ SIGNUP
     @PostMapping("/signup")
-    public User signup(@RequestBody User user) {
-        return userRepo.save(user);
+    public Map<String, String> signup(@RequestBody User user) {
+
+        Map<String, String> res = new HashMap<>();
+
+        // 🔥 CHECK IF EMAIL EXISTS IN DB
+        Optional<User> existing = userRepo.findByEmail(user.getEmail());
+
+        if (existing.isPresent()) {
+            res.put("error", "Email already exists");
+            return res;
+        }
+
+        // 🔥 SAVE TO DATABASE
+        userRepo.save(user);
+
+        res.put("message", "User registered");
+        return res;
     }
 
     // ✅ LOGIN
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody User user) {
 
-        User existing = userRepo.findByEmail(user.getEmail());
+        Map<String, Object> res = new HashMap<>();
 
-        Map<String, Object> response = new HashMap<>();
+        // 🔥 CHECK FROM DATABASE
+        Optional<User> existing = userRepo.findByEmail(user.getEmail());
 
-        if (existing != null && existing.getPassword().equals(user.getPassword())) {
-            response.put("token", "dummy-token");
-            response.put("role", existing.getRole());
-            response.put("username", existing.getUsername());
+        if (existing.isPresent() &&
+                existing.get().getPassword().equals(user.getPassword())) {
+
+            res.put("message", "Login success");
+            res.put("role", existing.get().getRole());
+
         } else {
-            response.put("error", "Invalid credentials");
+            res.put("error", "Invalid credentials");
         }
 
-        return response;
+        return res;
     }
 }

@@ -9,7 +9,7 @@ export interface User {
 
 export interface DicomPatient {
   id: string
-  filename: string
+  filePath: string
   patientName: string
   patientId: string
   age: string

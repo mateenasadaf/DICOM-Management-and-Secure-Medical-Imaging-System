@@ -13,20 +13,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Demo users for UI showcase (in production, this would connect to a real backend)
-const DEMO_USERS: (User & { password: string })[] = [
-  { id: "1", name: "Dr. Sarah Johnson", email: "doctor@demo.com", password: "demo123", role: "doctor" },
-  { id: "2", name: "Mike Chen", email: "tech@demo.com", password: "demo123", role: "technician" },
-  { id: "3", name: "Admin User", email: "admin@demo.com", password: "demo123", role: "admin" },
-]
+// ❌ REMOVED DEMO USERS (fake system removed)
+// const DEMO_USERS = [...]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+
   const [user, setUser] = useState<User | null>(null)
+
+  // ❌ REMOVED fake registeredUsers state
+  // const [registeredUsers, setRegisteredUsers] = useState(...)
+
   const [isLoading, setIsLoading] = useState(true)
-  const [registeredUsers, setRegisteredUsers] = useState<(User & { password: string })[]>(DEMO_USERS)
 
   useEffect(() => {
-    // Check for existing session
     const savedUser = sessionStorage.getItem("pacs_user")
     if (savedUser) {
       try {
@@ -38,59 +37,89 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    // Simulate API delay
-    await new Promise((r) => setTimeout(r, 500))
+  // =========================
+  // 🔥 LOGIN (CONNECTED TO BACKEND)
+  // =========================
+  const login = useCallback(async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
 
-    const foundUser = registeredUsers.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    )
+    try {
+      const response = await fetch("http://localhost:8080/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      })
 
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser
-      setUser(userWithoutPassword)
-      sessionStorage.setItem("pacs_user", JSON.stringify(userWithoutPassword))
+      const data = await response.json()
+
+      if (data.error) {
+        return { success: false, error: data.error }
+      }
+
+      // 🔥 CHANGED: create user from backend response
+      const userData: User = {
+        id: "temp-id", // backend not sending id (can improve later)
+        name: email,   // backend not sending name
+        email: email,
+        role: data.role
+      }
+
+      setUser(userData)
+      sessionStorage.setItem("pacs_user", JSON.stringify(userData))
+
       return { success: true }
+
+    } catch (err) {
+      return { success: false, error: "Server error" }
     }
 
-    return { success: false, error: "Invalid email or password" }
-  }, [registeredUsers])
+  }, [])
 
+  // =========================
+  // 🔥 SIGNUP (CONNECTED TO BACKEND)
+  // =========================
   const signup = useCallback(async (
     name: string,
     email: string,
     password: string,
     role: UserRole
   ): Promise<{ success: boolean; error?: string }> => {
-    // Simulate API delay
-    await new Promise((r) => setTimeout(r, 500))
 
-    // Check if email already exists
-    const existingUser = registeredUsers.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    )
+    try {
+      const response = await fetch("http://localhost:8080/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          // 🔥 CHANGED: sending correct fields to backend
+          email: email,
+          password: password,
+          role: role
+        })
+      })
 
-    if (existingUser) {
-      return { success: false, error: "Email already registered" }
+      const data = await response.json()
+
+      if (data.error) {
+        return { success: false, error: data.error }
+      }
+
+      // 🔥 CHANGED: no local storage user creation here
+      return { success: true }
+
+    } catch (err) {
+      return { success: false, error: "Server error" }
     }
 
-    // Create new user
-    const newUser: User & { password: string } = {
-      id: `user_${Date.now()}`,
-      name,
-      email,
-      password,
-      role,
-    }
-
-    setRegisteredUsers((prev) => [...prev, newUser])
-    
-    const { password: _, ...userWithoutPassword } = newUser
-    setUser(userWithoutPassword)
-    sessionStorage.setItem("pacs_user", JSON.stringify(userWithoutPassword))
-
-    return { success: true }
-  }, [registeredUsers])
+  }, [])
 
   const logout = useCallback(() => {
     setUser(null)
